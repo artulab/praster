@@ -1,0 +1,10 @@
+*~
+src/*~
+include/*~
+src/.libs
+src/.deps/
+vg_logfile.out
+tags
+.vscode/
+debug
+release

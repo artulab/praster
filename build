@@ -1,0 +1,105 @@
+#!/bin/bash
+
+helpFunction()
+{
+   echo ""
+   echo "usage: -m mode -v -h -d -t"
+   echo -e "\tm: build modes"
+   echo -e "\t\tdebug: build in debug mode"
+   echo -e "\t\trelease: build in release mode"
+   echo -e "\tv: run valgrind"
+   echo -e "\td: delete build directories"
+   echo -e "\tt: run tests"
+   echo -e "\th: show help"
+   exit 1 # Exit script after printing help
+}
+
+deleteBuildDirs()
+{
+   echo -e "deleting build directories..."
+   rm -rf debug release
+   exit 0
+}
+
+buildDebug()
+{
+   echo "building in debug mode..."
+   mkdir debug
+   cd debug
+   cmake -DCMAKE_BUILD_TYPE=Debug ..
+   make -j4
+   cd ..
+}
+
+buildRelease()
+{
+   echo "building in release mode..."
+   mkdir release
+   cd release
+   cmake -DCMAKE_BUILD_TYPE=Release ..
+   make -j4
+   cd ..
+}
+
+runTests()
+{
+   echo -e "running all test in debug..."
+   if [ ! -d debug ]; then
+      echo -e "debug not found."
+      buildDebug
+   fi
+   
+   cd debug
+   CTEST_OUTPUT_ON_FAILURE=1 make test
+   cd ..
+   exit 0
+}
+
+while getopts "hdvtm:" opt
+do
+   case "$opt" in
+      h ) 
+         helpFunction 
+         ;;
+      d ) 
+         deleteBuildDirs 
+         ;;
+      m ) 
+         mode="$OPTARG"
+         ;;
+      t ) 
+         runTests
+         ;;
+      v ) 
+         run_valgrind=true
+         ;;
+      ? ) helpFunction
+         ;;
+   esac
+done
+
+if [[ -z "$mode" && -z "$run_valgrind" ]]
+then
+   echo "no options passed"
+   helpFunction
+fi
+
+if [ -n "$mode" ]
+then
+   if [ $mode == 'debug' ]
+   then
+      buildDebug
+   elif [ $mode == 'release' ]
+   then
+      buildRelease
+   else
+      echo "error: unknown build mode $mode"
+      helpFunction
+   fi
+fi
+
+if [ -n "$run_valgrind" ]
+then
+   echo "running valgrind and saving the log to the following file: 'vg_logfile.out'"
+   valgrind --leak-check=full -v  --show-leak-kinds=all --track-origins=yes --log-file=vg_logfile.out ./debug/src/praster
+fi
